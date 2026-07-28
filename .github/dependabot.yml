@@ -46,10 +46,21 @@ updates:
       - dependency-name: "eslint"
         update-types: ["version-update:semver-major"]
 
+      # eslint-config-standard@17 peer-depends on eslint-plugin-promise@^6;
+      # grouped with "eslint*" above, a major bump here breaks `npm install`
+      # (ERESOLVE) before anything even gets to lint.
+      - dependency-name: "eslint-plugin-promise"
+        update-types: ["version-update:semver-major"]
+
+      # @typescript-eslint/parser peer-requires typescript ">=4.8.4 <6.1.0".
+      # The "types*" pattern in the types group below also incidentally
+      # matches the bare "typescript" package name, so without this it gets
+      # bumped alongside @typescript-eslint and breaks `npm install`.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+
   - package-ecosystem: "github-actions"
     directory: "/"
     open-pull-requests-limit: 3
-    labels:
-      - "no-test"
     schedule:
       interval: "weekly"
