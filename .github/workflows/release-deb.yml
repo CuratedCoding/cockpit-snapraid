@@ -14,6 +14,17 @@ on:
       - 'packaging/**'
   workflow_dispatch:
 
+# "Compute next version" reads the latest existing tag and increments it, so
+# two runs checked out around the same time (e.g. several PRs merged to main
+# within seconds of each other) can compute and push the identical "next"
+# tag -- only the first push wins, the rest fail with "tag already exists".
+# Serialize runs instead of letting them race; cancel-in-progress stays false
+# so every push still gets its own release once it's this run's turn, rather
+# than being skipped.
+concurrency:
+  group: release-deb
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-latest
