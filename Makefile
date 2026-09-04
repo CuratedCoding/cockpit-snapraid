@@ -161,16 +161,31 @@ rpm: $(TARFILE) $(NODE_CACHE) $(SPEC)
 	rm -r "`pwd`/rpmbuild"
 	rm -r "`pwd`/output" "`pwd`/build"
 
-# Debian package. This is a pure static web asset (no compiled code), so a
-# hand-assembled tree + dpkg-deb is enough; no need for full debhelper.
+# Debian package. The frontend is static and the only system integration is a
+# small systemd/nftables guard, so a hand-assembled tree + dpkg-deb is enough;
+# no need for full debhelper.
 DEB_NAME=$(RPM_NAME)_$(VERSION)_all.deb
 DEB_ROOT=deb-root
+DEB_PACKAGING_FILES= \
+	packaging/debian/control.in \
+	packaging/debian/cockpit-snapraid-api-guard.nft \
+	packaging/debian/cockpit-snapraid-api-guard.service \
+	packaging/debian/postinst \
+	packaging/debian/prerm \
+	packaging/debian/postrm
 
 deb: export NODE_ENV=production
-deb: $(DIST_TEST)
+deb: $(DIST_TEST) $(DEB_PACKAGING_FILES)
 	rm -rf $(DEB_ROOT)
-	mkdir -p $(DEB_ROOT)/DEBIAN $(DEB_ROOT)/usr/share/cockpit/$(PACKAGE_NAME)
+	mkdir -p $(DEB_ROOT)/DEBIAN $(DEB_ROOT)/lib/systemd/system \
+		$(DEB_ROOT)/usr/lib/cockpit-$(PACKAGE_NAME) $(DEB_ROOT)/usr/share/cockpit/$(PACKAGE_NAME)
 	cp -r dist/. $(DEB_ROOT)/usr/share/cockpit/$(PACKAGE_NAME)/
+	install -m 0644 packaging/debian/cockpit-snapraid-api-guard.nft \
+		$(DEB_ROOT)/usr/lib/cockpit-$(PACKAGE_NAME)/
+	install -m 0644 packaging/debian/cockpit-snapraid-api-guard.service \
+		$(DEB_ROOT)/lib/systemd/system/
+	install -m 0755 packaging/debian/postinst packaging/debian/prerm packaging/debian/postrm \
+		$(DEB_ROOT)/DEBIAN/
 	sed 's/VERSION/$(VERSION)/' packaging/debian/control.in > $(DEB_ROOT)/DEBIAN/control
 	dpkg-deb --build --root-owner-group $(DEB_ROOT) $(DEB_NAME)
 	rm -rf $(DEB_ROOT)

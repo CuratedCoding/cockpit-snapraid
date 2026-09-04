@@ -1,0 +1,14 @@
+[Unit]
+Description=Restrict SnapRAID-Daemon API to root-owned local clients
+Documentation=https://github.com/sloraris/cockpit-snapraid
+After=network-pre.target
+Before=network.target snapraidd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/nft --file /usr/lib/cockpit-snapraid/cockpit-snapraid-api-guard.nft
+ExecStop=-/usr/sbin/nft delete table inet cockpit_snapraid
+
+[Install]
+WantedBy=multi-user.target

@@ -14,27 +14,40 @@ import { DashboardTab } from './DashboardTab';
 import { DifferencesTab } from './DifferencesTab';
 import { DisksCard } from './DisksCard';
 import { HealthBanner } from './HealthBanner';
+import { LocalApiSecurityNotice, useLocalApiSecurity } from './LocalApiSecurity';
 import { RecoveryTab } from './RecoveryTab';
 import { SettingsTab } from './SettingsTab';
 import { HISTORY_INITIAL_LIMIT, TasksTab } from './TasksTab';
-import { useSnapraidData } from './useSnapraidData';
+import { useSnapraidData, type SnapraidData } from './useSnapraidData';
 
 const _ = cockpit.gettext;
 
 type TabKey = 'dashboard' | 'disks' | 'tasks' | 'differences' | 'recovery' | 'settings';
 
-export const Application = () => {
+const ApplicationContent = ({
+    data,
+    historyLimit,
+    onHistoryShowMore,
+}: {
+    data: SnapraidData;
+    historyLimit: number;
+    onHistoryShowMore: () => void;
+}) => {
     const [activeTab, setActiveTab] = useState<TabKey>('dashboard');
-    const [historyLimit, setHistoryLimit] = useState(HISTORY_INITIAL_LIMIT);
-    const data = useSnapraidData(historyLimit);
+    const security = useLocalApiSecurity();
 
     return (
         <div className="snapraid-page">
+            <LocalApiSecurityNotice security={ security } />
             <HealthBanner array={ data.array } />
             { data.error &&
-            <Alert variant="danger" title={ _("Failed to reach snapraid-daemon") } className="snapraid-mb-md">
-                { data.error }
-            </Alert> }
+                <Alert
+                    variant="danger"
+                    title={ _("Failed to reach snapraid-daemon") }
+                    className="snapraid-mb-md"
+                >
+                    { data.error }
+                </Alert> }
 
             <Tabs
                     activeKey={ activeTab }
@@ -59,7 +72,7 @@ export const Application = () => {
                         <TasksTab
                                 tasks={ data.tasks }
                                 historyLimit={ historyLimit }
-                                onHistoryShowMore={ () => setHistoryLimit(l => l + HISTORY_INITIAL_LIMIT) }
+                                onHistoryShowMore={ onHistoryShowMore }
                         />
                     </div>
                 </Tab>
@@ -75,10 +88,36 @@ export const Application = () => {
                 </Tab>
                 <Tab eventKey="settings" title={ <TabTitleText>{_("Settings")}</TabTitleText> }>
                     <div className="snapraid-mt-md">
-                        <SettingsTab config={ data.config } />
+                        <SettingsTab config={ data.config } security={ security } />
                     </div>
                 </Tab>
             </Tabs>
         </div>
+    );
+};
+
+export const Application = () => {
+    const [historyLimit, setHistoryLimit] = useState(HISTORY_INITIAL_LIMIT);
+    const data = useSnapraidData(historyLimit);
+
+    if (data.accessDenied) {
+        return (
+            <div className="snapraid-page">
+                <Alert
+                    variant="danger"
+                    title={ _("Administrative access required") }
+                >
+                    { _("Only administrators can view or operate the SnapRAID array.") }
+                </Alert>
+            </div>
+        );
+    }
+
+    return (
+        <ApplicationContent
+            data={ data }
+            historyLimit={ historyLimit }
+            onHistoryShowMore={ () => setHistoryLimit(limit => limit + HISTORY_INITIAL_LIMIT) }
+        />
     );
 };

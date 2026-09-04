@@ -9,9 +9,18 @@ A native [Cockpit](https://cockpit-project.org/) page for [snapraid-daemon](http
 
 `snapraid-daemon`'s built-in web UI has no authentication and no TLS, so it's
 not safe to expose on the network as-is. This plugin talks to the daemon's
-REST API over `127.0.0.1` through `cockpit-bridge` instead, so it inherits
-Cockpit's TLS, auth, and session handling for free, and looks like a native
-part of Cockpit rather than an embedded third-party dashboard.
+REST API over `127.0.0.1` through a privileged `cockpit-bridge` channel. Cockpit
+therefore authenticates the user and requires administrative access before the
+plugin can reach the daemon. The daemon must remain bound to loopback; do not
+expose its unauthenticated API directly to the LAN.
+
+Loopback binding is not authentication against other local processes. The
+Debian package installs a root-only `nftables` rule for port 7627 and enables
+it on systemd hosts, so the privileged Cockpit bridge can reach the daemon but
+ordinary local accounts cannot. The page warns when this rule is missing and
+records an explicit, root-owned acknowledgement if an administrator chooses to
+suppress that warning. The rule cannot protect a daemon bound to a LAN address:
+keep the daemon bound to loopback.
 
 ## Features
 
@@ -52,7 +61,19 @@ part of Cockpit rather than an embedded third-party dashboard.
 - `snapraid-daemon` running locally with its REST API enabled, bound to
   `127.0.0.1:7627` (see `snapraidd.conf`'s `net_port` / `net_acl`) — not
   exposed on the LAN, since the plugin reaches it locally through the bridge
+- SnapRAID 14.0 or newer (the daemon's command and log protocols are not
+  compatible with SnapRAID 12.x)
 - Cockpit (`cockpit-bridge` ≥ 137)
+
+Recommended daemon network settings:
+
+```ini
+net_enabled = 1
+net_port = 127.0.0.1:7627
+net_acl = +127.0.0.1
+net_allowed_origin = none
+net_config_full_access = 0
+```
 
 ## Install
 
@@ -65,6 +86,12 @@ sudo apt install ./cockpit-snapraid_*_all.deb
 
 Reload Cockpit in your browser afterward. A new `.deb` is published automatically
 whenever a change lands on `main`.
+
+On systemd hosts, the package enables `cockpit-snapraid-api-guard.service`
+immediately and at boot. Administrators who deliberately need another local
+process to call the daemon can disable it with `sudo systemctl disable --now
+cockpit-snapraid-api-guard.service`; Cockpit will show the local API warning
+unless it is acknowledged in the page.
 
 ## Development
 

@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+case "$1" in
+    purge)
+        rm -f /var/lib/cockpit-snapraid/local-api-warning-acknowledged
+        rmdir /var/lib/cockpit-snapraid 2>/dev/null || true
+        ;;
+esac
+
+if [ -d /run/systemd/system ]; then
+    systemctl daemon-reload
+fi
+
+exit 0

@@ -18,6 +18,7 @@ import { Stack, StackItem } from "@patternfly/react-core/dist/esm/layouts/Stack/
 import cockpit from 'cockpit';
 
 import { patchConfig } from './daemon';
+import { LocalApiSecurityCard, type LocalApiSecurity } from './LocalApiSecurity';
 import type { Config, LogLevel } from './types';
 
 const _ = cockpit.gettext;
@@ -59,7 +60,7 @@ const SwitchField = (
     </FormGroup>
 );
 
-export const SettingsTab = ({ config }: { config?: Config | undefined }) => {
+export const SettingsTab = ({ config, security }: { config?: Config | undefined, security: LocalApiSecurity }) => {
     const [form, setForm] = useState<Config | null>(null);
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -118,6 +119,7 @@ export const SettingsTab = ({ config }: { config?: Config | undefined }) => {
 
             <StackItem>
                 <Gallery hasGutter minWidths={ { default: '100%', md: '360px' } }>
+                    <LocalApiSecurityCard security={ security } />
                     <Card>
                         <CardTitle>{_("Automation")}</CardTitle>
                         <CardBody>

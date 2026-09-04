@@ -1,0 +1,11 @@
+# Restrict SnapRAID-Daemon's unauthenticated loopback API to root-owned
+# processes. cockpit-bridge runs privileged requests as root after Cockpit has
+# authorized the user. A listener outside loopback is deliberately not covered
+# by this rule and must be fixed in snapraidd's own configuration.
+
+add table inet cockpit_snapraid
+
+add chain inet cockpit_snapraid output { type filter hook output priority filter; policy accept; }
+
+add rule inet cockpit_snapraid output ip daddr 127.0.0.1 tcp dport 7627 meta skuid != 0 reject with tcp reset
+add rule inet cockpit_snapraid output ip6 daddr ::1 tcp dport 7627 meta skuid != 0 reject with tcp reset

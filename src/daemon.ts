@@ -14,7 +14,9 @@ export const DAEMON_PORT = "7627";
 export const DAEMON_ADDRESS = "127.0.0.1";
 
 export function daemonClient() {
-    return cockpit.http(DAEMON_PORT, { address: DAEMON_ADDRESS });
+    // The daemon can execute SnapRAID as root. Requiring a privileged bridge
+    // makes Cockpit enforce authorization instead of relying on hidden UI.
+    return cockpit.http(DAEMON_PORT, { address: DAEMON_ADDRESS, superuser: "require" });
 }
 
 export async function getJSON<T>(

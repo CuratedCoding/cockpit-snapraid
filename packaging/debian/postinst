@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+
+case "$1" in
+    configure)
+        if [ -d /run/systemd/system ]; then
+            systemctl daemon-reload
+            systemctl enable cockpit-snapraid-api-guard.service
+            systemctl restart cockpit-snapraid-api-guard.service
+        fi
+        ;;
+esac
+
+exit 0
