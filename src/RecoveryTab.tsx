@@ -24,6 +24,7 @@ import type { ListingTableRowProps } from 'cockpit-components-table';
 
 import { ConfirmModal } from './ConfirmModal';
 import { healArray, undeleteFiles } from './daemon';
+import { isSupportedEngineVersion } from './engine';
 import type { ArrayInfo } from './types';
 
 const _ = cockpit.gettext;
@@ -51,6 +52,7 @@ export const RecoveryTab = ({ array }: { array?: ArrayInfo | undefined }) => {
 
     const filters = patterns.split("\n").map(l => l.trim())
             .filter(Boolean);
+    const operationsDisabled = !isSupportedEngineVersion(array.engine_version);
 
     const runUndelete = () => {
         setError(null);
@@ -108,7 +110,12 @@ export const RecoveryTab = ({ array }: { array?: ArrayInfo | undefined }) => {
                                 aria-label={ _("Undelete file patterns") }
                                 className="snapraid-mb-md"
                             />
-                            <Button variant="primary" isLoading={ undeleting } onClick={ () => setPendingAction('undelete') }>
+                            <Button
+                                variant="primary"
+                                isLoading={ undeleting }
+                                isDisabled={ operationsDisabled }
+                                onClick={ () => setPendingAction('undelete') }
+                            >
                                 {_("Undelete files")}
                             </Button>
                         </CardBody>
@@ -133,7 +140,7 @@ export const RecoveryTab = ({ array }: { array?: ArrayInfo | undefined }) => {
                             <Button
                                 variant="danger"
                                 isLoading={ healing }
-                                isDisabled={ !array.blocks_bad }
+                                isDisabled={ operationsDisabled || !array.blocks_bad }
                                 onClick={ () => setPendingAction('heal') }
                             >
                                 {_("Heal silent errors")}
@@ -182,6 +189,14 @@ export const RecoveryTab = ({ array }: { array?: ArrayInfo | undefined }) => {
                                 ? cockpit.format(_("This will attempt to recover files matching: $0"), filters.join(", "))
                                 : _("No patterns entered — this will attempt to recover every missing file across the entire array.") }
                         </p>
+                        <Alert
+                            variant="warning"
+                            isInline
+                            title={ _("Ownership and permissions are not recovered") }
+                            className="snapraid-mb-md"
+                        >
+                            { _("Recovered files are owned by the account running snapraid-daemon and are created with restrictive permissions. Verify and restore access after recovery.") }
+                        </Alert>
                         <Checkbox
                             id="undelete-spindown-on-finish"
                             label={ _("Spin down all disks once finished") }

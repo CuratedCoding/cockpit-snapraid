@@ -8,6 +8,7 @@ import { Flex, FlexItem } from "@patternfly/react-core/dist/esm/layouts/Flex/ind
 
 import cockpit from 'cockpit';
 
+import { isUnsupportedEngineVersion, MINIMUM_ENGINE_MAJOR } from './engine';
 import { HEALTH_COLOR } from './StatusLabel';
 import type { ArrayInfo, Health } from './types';
 
@@ -24,6 +25,33 @@ const HEALTH_TEXT: Record<Health, string> = {
 export const HealthBanner = ({ array }: { array?: ArrayInfo | undefined }) => {
     if (!array)
         return null;
+
+    if (isUnsupportedEngineVersion(array.engine_version)) {
+        return (
+            <div className="snapraid-health-banner snapraid-mb-md">
+                <Banner status="danger">
+                    <Flex spaceItems={ { default: 'spaceItemsSm' } } justifyContent={ { default: 'justifyContentCenter' } }>
+                        <FlexItem>{ cockpit.format(_("Unsupported SnapRAID version: $0"), array.engine_version) }</FlexItem>
+                        <FlexItem>{ cockpit.format(_("snapraid-daemon requires SnapRAID $0.0 or newer."), MINIMUM_ENGINE_MAJOR) }</FlexItem>
+                    </Flex>
+                </Banner>
+            </div>
+        );
+    }
+
+    const removed = array.diff_removed ?? 0;
+    if (removed > 0 && (array.health === 'passed' || array.health === 'pending')) {
+        return (
+            <div className="snapraid-health-banner snapraid-mb-md">
+                <Banner status="warning">
+                    <Flex spaceItems={ { default: 'spaceItemsSm' } } justifyContent={ { default: 'justifyContentCenter' } }>
+                        <FlexItem>{ cockpit.format(_("$0 entries are missing or pending deletion"), removed) }</FlexItem>
+                        <FlexItem>{_("Review differences before syncing.")}</FlexItem>
+                    </Flex>
+                </Banner>
+            </div>
+        );
+    }
 
     // Unlike Label, Banner's status/color props are mutually exclusive in its
     // type, so (unlike HealthLabel) this has to pick exactly one to pass.

@@ -14,7 +14,9 @@ import { Flex, FlexItem } from "@patternfly/react-core/dist/esm/layouts/Flex/ind
 
 import cockpit from 'cockpit';
 
+import { ConfirmModal } from './ConfirmModal';
 import { requestRefresh, scheduleCommands, setHoldOff, startMaintenance, stopActiveTask } from './daemon';
+import { isSupportedEngineVersion } from './engine';
 import { TaskStatusLabel } from './StatusLabel';
 import type { ArrayInfo, Command, StateResponse, TasksResponse } from './types';
 
@@ -86,6 +88,7 @@ export const ActionsCard = (
     const [error, setError] = useState<string | null>(null);
     const [triggering, setTriggering] = useState<Command | null>(null);
     const [showMaintenanceDialog, setShowMaintenanceDialog] = useState(false);
+    const [showSyncDialog, setShowSyncDialog] = useState(false);
     const [maintaining, setMaintaining] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [togglingHoldOff, setTogglingHoldOff] = useState(false);
@@ -94,6 +97,7 @@ export const ActionsCard = (
     const pendingCount = tasks?.pending?.length ?? 0;
     const isBusy = !!active || !!state?.active_command;
     const isBadHealth = array?.health === 'failing' || array?.health === 'prefail';
+    const operationsDisabled = !isSupportedEngineVersion(array?.engine_version);
 
     const trigger = (command: Command) => {
         setError(null);
@@ -101,6 +105,11 @@ export const ActionsCard = (
         scheduleCommands([command])
                 .catch(err => setError(cockpit.message(err)))
                 .finally(() => setTriggering(null));
+    };
+
+    const runStandaloneSync = () => {
+        setShowSyncDialog(false);
+        trigger('sync');
     };
 
     const stop = () => {
@@ -144,7 +153,7 @@ export const ActionsCard = (
                         <Button
                             variant="primary"
                             isLoading={ maintaining }
-                            isDisabled={ isBusy }
+                            isDisabled={ isBusy || operationsDisabled }
                             onClick={ () => setShowMaintenanceDialog(true) }
                         >
                             {_("Run maintenance")}
@@ -163,9 +172,9 @@ export const ActionsCard = (
                         <FlexItem key={ cmd }>
                             <Button
                                 variant="secondary"
-                                isDisabled={ isBusy }
+                                isDisabled={ isBusy || operationsDisabled }
                                 isLoading={ triggering === cmd }
-                                onClick={ () => trigger(cmd) }
+                                onClick={ () => cmd === 'sync' ? setShowSyncDialog(true) : trigger(cmd) }
                             >
                                 { COMMAND_LABEL[cmd] }
                             </Button>
@@ -212,7 +221,7 @@ export const ActionsCard = (
                         id="hold-off"
                         label={ _("Hold off next scheduled maintenance") }
                         isChecked={ !!array?.hold_off }
-                        isDisabled={ togglingHoldOff }
+                        isDisabled={ togglingHoldOff || !array }
                         onChange={ (_ev, checked) => toggleHoldOff(checked) }
                     />
                 </div>
@@ -220,6 +229,20 @@ export const ActionsCard = (
 
             { showMaintenanceDialog &&
                 <MaintenanceDialog onClose={ () => setShowMaintenanceDialog(false) } onConfirm={ runMaintenance } /> }
+
+            <ConfirmModal
+                isOpen={ showSyncDialog }
+                title={ _("Sync without safety thresholds?") }
+                confirmLabel={ _("Sync anyway") }
+                isBusy={ triggering === 'sync' }
+                onConfirm={ runStandaloneSync }
+                onCancel={ () => setShowSyncDialog(false) }
+                message={
+                    <p>
+                        { _("A standalone sync bypasses the configured delete and update thresholds. Use maintenance for routine changes, and continue only after reviewing the detected differences.") }
+                    </p>
+                }
+            />
         </Card>
     );
 };
