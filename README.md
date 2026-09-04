@@ -61,7 +61,8 @@ keep the daemon bound to loopback.
 - `snapraid-daemon` running locally with its REST API enabled, bound to
   `127.0.0.1:7627` (see `snapraidd.conf`'s `net_port` / `net_acl`) — not
   exposed on the LAN, since the plugin reaches it locally through the bridge
-- SnapRAID 14.0 or newer (the daemon's command and log protocols are not
+- SnapRAID 14.1 or newer (the official SnapRAID-Daemon Debian package requires
+  this minimum; the daemon's command and log protocols are not
   compatible with SnapRAID 12.x)
 - Cockpit (`cockpit-bridge` ≥ 137)
 

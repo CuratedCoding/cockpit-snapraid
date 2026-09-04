@@ -8,7 +8,7 @@ import { Flex, FlexItem } from "@patternfly/react-core/dist/esm/layouts/Flex/ind
 
 import cockpit from 'cockpit';
 
-import { isUnsupportedEngineVersion, MINIMUM_ENGINE_MAJOR } from './engine';
+import { isUnsupportedEngineVersion, MINIMUM_ENGINE_VERSION } from './engine';
 import { HEALTH_COLOR } from './StatusLabel';
 import type { ArrayInfo, Health } from './types';
 
@@ -32,7 +32,7 @@ export const HealthBanner = ({ array }: { array?: ArrayInfo | undefined }) => {
                 <Banner status="danger">
                     <Flex spaceItems={ { default: 'spaceItemsSm' } } justifyContent={ { default: 'justifyContentCenter' } }>
                         <FlexItem>{ cockpit.format(_("Unsupported SnapRAID version: $0"), array.engine_version) }</FlexItem>
-                        <FlexItem>{ cockpit.format(_("snapraid-daemon requires SnapRAID $0.0 or newer."), MINIMUM_ENGINE_MAJOR) }</FlexItem>
+                        <FlexItem>{ cockpit.format(_("snapraid-daemon requires SnapRAID $0 or newer."), MINIMUM_ENGINE_VERSION) }</FlexItem>
                     </Flex>
                 </Banner>
             </div>
