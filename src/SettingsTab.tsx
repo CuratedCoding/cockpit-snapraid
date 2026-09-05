@@ -9,6 +9,7 @@ import { Card, CardBody, CardTitle } from "@patternfly/react-core/dist/esm/compo
 import { EmptyState, EmptyStateBody } from "@patternfly/react-core/dist/esm/components/EmptyState/index.js";
 import { Form, FormGroup } from "@patternfly/react-core/dist/esm/components/Form/index.js";
 import { FormSelect, FormSelectOption } from "@patternfly/react-core/dist/esm/components/FormSelect/index.js";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@patternfly/react-core/dist/esm/components/Modal/index.js";
 import { Spinner } from "@patternfly/react-core/dist/esm/components/Spinner/index.js";
 import { Switch } from "@patternfly/react-core/dist/esm/components/Switch/index.js";
 import { TextInput } from "@patternfly/react-core/dist/esm/components/TextInput/index.js";
@@ -17,13 +18,55 @@ import { Stack, StackItem } from "@patternfly/react-core/dist/esm/layouts/Stack/
 
 import cockpit from 'cockpit';
 
-import { patchConfig } from './daemon';
+import { patchConfig, setConfigFullAccess } from './daemon';
 import { LocalApiSecurityCard, type LocalApiSecurity } from './LocalApiSecurity';
 import type { Config, LogLevel } from './types';
 
 const _ = cockpit.gettext;
 
 const LOG_LEVELS: LogLevel[] = ['critical', 'error', 'warning', 'info'];
+
+type ConfigAccessAction = 'enable' | 'restrict';
+
+const ConfigAccessModal = (
+    { action, isBusy, onConfirm, onCancel }: {
+        action: ConfigAccessAction | null, isBusy: boolean, onConfirm: () => void, onCancel: () => void,
+    }
+) => {
+    if (!action)
+        return null;
+
+    const enabling = action === 'enable';
+    return (
+        <Modal isOpen onClose={ onCancel } variant="small">
+            <ModalHeader
+                title={ enabling ? _("Enable restricted settings?") : _("Restrict settings?") }
+                titleIconVariant="warning"
+            />
+            <ModalBody>
+                { enabling
+                    ? <>
+                        <p>{ _("This allows Cockpit administrators to edit hook and notification commands, including the account used to run them.") }</p>
+                        <p>{ _("Only net_config_full_access in snapraidd.conf will change. SnapRAID-Daemon will reload; no array operation will run.") }</p>
+                    </>
+                    : <>
+                        <p>{ _("This makes hook and notification command settings read-only in Cockpit again. Existing values are preserved.") }</p>
+                        <p>{ _("Only net_config_full_access in snapraidd.conf will change. SnapRAID-Daemon will reload; no array operation will run.") }</p>
+                    </> }
+            </ModalBody>
+            <ModalFooter>
+                <Button
+                    variant={ enabling ? "primary" : "danger" }
+                    isLoading={ isBusy }
+                    onClick={ onConfirm }
+                >
+                    { enabling ? _("Enable restricted settings") : _("Restrict settings") }
+                </Button>
+                <Button variant="link" isDisabled={ isBusy } onClick={ onCancel }>{_("Cancel")}</Button>
+            </ModalFooter>
+        </Modal>
+    );
+};
 
 const TextField = (
     { form, field, label, help, disabled = false, onChange }: {
@@ -66,6 +109,10 @@ export const SettingsTab = ({ config, security }: { config?: Config | undefined,
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [saved, setSaved] = useState(false);
+    const [accessAction, setAccessAction] = useState<ConfigAccessAction | null>(null);
+    const [accessPending, setAccessPending] = useState(false);
+    const [accessError, setAccessError] = useState<string | null>(null);
+    const [accessUpdated, setAccessUpdated] = useState(false);
 
     useEffect(() => {
         if (config && !dirty)
@@ -81,6 +128,7 @@ export const SettingsTab = ({ config, security }: { config?: Config | undefined,
     }
 
     const fullAccess = form.config_full_access !== false;
+    const canEnableRestrictedSettings = !security.loading && security.guardActive && security.listener === 'loopback';
 
     const setField = (field: keyof Config, value: string | number | boolean) => {
         setDirty(true);
@@ -100,13 +148,63 @@ export const SettingsTab = ({ config, security }: { config?: Config | undefined,
                 .finally(() => setSaving(false));
     };
 
+    const changeConfigAccess = () => {
+        if (!accessAction)
+            return;
+
+        const enabled = accessAction === 'enable';
+        setAccessAction(null);
+        setAccessError(null);
+        setAccessUpdated(false);
+        setAccessPending(true);
+        setConfigFullAccess(enabled)
+                .then(() => {
+                    setForm(current => current ? { ...current, config_full_access: enabled } : current);
+                    setAccessUpdated(true);
+                })
+                .catch(err => setAccessError(cockpit.message(err)))
+                .finally(() => setAccessPending(false));
+    };
+
     return (
         <Stack hasGutter>
             { !fullAccess &&
                 <StackItem>
                     <Alert variant="info" isInline title={ _("Restricted access mode") }>
-                        { _("Security-sensitive settings (scripts, commands, users) are read-only because net_config_full_access is disabled. Edit snapraidd.conf manually to change these values.") }
+                        <p>{ _("Security-sensitive settings (scripts, commands, users) are read-only because net_config_full_access is disabled.") }</p>
+                        { !canEnableRestrictedSettings &&
+                            <p>{ _("Enable the root-only local API guard and bind SnapRAID-Daemon only to loopback before allowing Cockpit to edit these settings.") }</p> }
+                        <Button
+                            variant="secondary"
+                            isDisabled={ !canEnableRestrictedSettings || accessPending }
+                            isLoading={ accessPending }
+                            onClick={ () => setAccessAction('enable') }
+                        >
+                            {_("Enable restricted settings")}
+                        </Button>
                     </Alert>
+                </StackItem> }
+            { fullAccess &&
+                <StackItem>
+                    <Alert variant="warning" isInline title={ _("Restricted settings enabled") }>
+                        <p>{ _("Cockpit administrators can edit hook and notification commands, including the account used to run them.") }</p>
+                        <Button
+                            variant="secondary"
+                            isDisabled={ accessPending }
+                            isLoading={ accessPending }
+                            onClick={ () => setAccessAction('restrict') }
+                        >
+                            {_("Restrict settings")}
+                        </Button>
+                    </Alert>
+                </StackItem> }
+            { accessError &&
+                <StackItem>
+                    <Alert variant="danger" isInline title={ _("Restricted settings change failed") }>{ accessError }</Alert>
+                </StackItem> }
+            { accessUpdated &&
+                <StackItem>
+                    <Alert variant="success" isInline title={ _("Restricted settings updated") } />
                 </StackItem> }
             { error &&
                 <StackItem>
@@ -264,6 +362,12 @@ form={ form } field="hook_run_as_user" label={ _("Run hook as user") }
                     {_("Save settings")}
                 </Button>
             </StackItem>
+            <ConfigAccessModal
+                action={ accessAction }
+                isBusy={ accessPending }
+                onConfirm={ changeConfigAccess }
+                onCancel={ () => setAccessAction(null) }
+            />
         </Stack>
     );
 };

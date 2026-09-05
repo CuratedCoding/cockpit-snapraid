@@ -13,6 +13,37 @@ import type { CommandOptions, Config } from './types';
 export const DAEMON_PORT = "7627";
 export const DAEMON_ADDRESS = "127.0.0.1";
 
+const SNAPRAIDD_CONFIG_PATH = "/etc/snapraidd.conf";
+const FULL_ACCESS_SETTING = "net_config_full_access";
+
+const updateFullAccessSetting = (content: string, enabled: boolean): string => {
+    const newline = content.includes("\r\n") ? "\r\n" : "\n";
+    const value = enabled ? "1" : "0";
+    let matches = 0;
+
+    const updated = content.split(/\r?\n/).map(line => {
+        if (line.trimStart().startsWith("#"))
+            return line;
+
+        const match = line.match(/^(\s*net_config_full_access\s*=\s*)[^#\r\n]*(\s*(?:#.*)?)?$/);
+        if (!match)
+            return line;
+
+        matches += 1;
+        return `${match[1]}${value}${match[2] ?? ""}`;
+    });
+
+    if (matches > 1)
+        throw new Error("snapraidd.conf contains more than one net_config_full_access setting.");
+
+    if (matches === 0) {
+        const separator = content.length === 0 || content.endsWith("\n") ? "" : newline;
+        return `${content}${separator}${FULL_ACCESS_SETTING} = ${value}${newline}`;
+    }
+
+    return updated.join(newline);
+};
+
 export function daemonClient() {
     // The daemon can execute SnapRAID as root. Requiring a privileged bridge
     // makes Cockpit enforce authorization instead of relying on hidden UI.
@@ -127,4 +158,25 @@ export async function patchConfig(partial: Partial<Config>): Promise<void> {
     } finally {
         http.close();
     }
+}
+
+// SnapRAID-Daemon intentionally refuses to change this safety switch through
+// its REST API. Cockpit's privileged file channel keeps that decision intact:
+// only an authorized Cockpit administrator can change the static setting.
+export async function setConfigFullAccess(enabled: boolean): Promise<void> {
+    const configFile = cockpit.file(SNAPRAIDD_CONFIG_PATH, { superuser: "require" });
+    try {
+        await configFile.modify((content: string | null) => {
+            if (content === null)
+                throw new Error("snapraidd.conf was not found.");
+            return updateFullAccessSetting(content, enabled);
+        });
+    } finally {
+        configFile.close();
+    }
+
+    await cockpit.spawn(
+        ["/usr/bin/systemctl", "reload", "snapraidd.service"],
+        { superuser: "require", err: "message" }
+    );
 }
