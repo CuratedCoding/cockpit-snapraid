@@ -26,40 +26,29 @@ const _ = cockpit.gettext;
 
 const LOG_LEVELS: LogLevel[] = ['critical', 'error', 'warning', 'info'];
 
-type ConfigAccessAction = 'enable' | 'restrict';
-
 const ConfigAccessModal = (
-    { action, isBusy, onConfirm, onCancel }: {
-        action: ConfigAccessAction | null, isBusy: boolean, onConfirm: () => void, onCancel: () => void,
+    { isOpen, isBusy, onConfirm, onCancel }: {
+        isOpen: boolean, isBusy: boolean, onConfirm: () => void, onCancel: () => void,
     }
 ) => {
-    if (!action)
+    if (!isOpen)
         return null;
 
-    const enabling = action === 'enable';
-    const explanation = enabling
-        ? _("SnapRAID-Daemon requires this setting before it will accept changes to scripts, commands, and users from Cockpit.")
-        : _("This returns scripts, commands, and user settings to read-only mode in Cockpit. Existing values are preserved.");
-    const configurationChange = enabling
-        ? _("Enabling sets net_config_full_access = 1 in /etc/snapraidd.conf. SnapRAID-Daemon will reload to read the new configuration.")
-        : _("Restricting sets net_config_full_access = 0 in /etc/snapraidd.conf. SnapRAID-Daemon will reload to read the new configuration.");
     return (
         <Modal isOpen onClose={ onCancel } variant="small">
-            <ModalHeader
-                title={ enabling ? _("Enable restricted settings?") : _("Restrict settings?") }
-                titleIconVariant="warning"
-            />
+            <ModalHeader title={ _("Enable restricted settings?") } titleIconVariant="warning" />
             <ModalBody>
-                <p>{ explanation }</p>
-                <p>{ configurationChange }</p>
+                <p>{ _("SnapRAID-Daemon requires this setting before it will accept changes to scripts, commands, and users from Cockpit.") }</p>
+                <p>{ _("Enabling sets net_config_full_access = 1 in /etc/snapraidd.conf.") }</p>
+                <p>{ _("SnapRAID-Daemon will reload to read the new configuration.") }</p>
             </ModalBody>
             <ModalFooter>
                 <Button
-                    variant={ enabling ? "primary" : "danger" }
+                    variant="primary"
                     isLoading={ isBusy }
                     onClick={ onConfirm }
                 >
-                    { enabling ? _("Enable restricted settings") : _("Restrict settings") }
+                    { _("Enable restricted settings") }
                 </Button>
                 <Button variant="link" isDisabled={ isBusy } onClick={ onCancel }>{_("Cancel")}</Button>
             </ModalFooter>
@@ -108,10 +97,9 @@ export const SettingsTab = ({ config, security }: { config?: Config | undefined,
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [saved, setSaved] = useState(false);
-    const [accessAction, setAccessAction] = useState<ConfigAccessAction | null>(null);
+    const [showEnableAccessDialog, setShowEnableAccessDialog] = useState(false);
     const [accessPending, setAccessPending] = useState(false);
     const [accessError, setAccessError] = useState<string | null>(null);
-    const [accessUpdated, setAccessUpdated] = useState(false);
 
     useEffect(() => {
         if (config && !dirty)
@@ -148,18 +136,12 @@ export const SettingsTab = ({ config, security }: { config?: Config | undefined,
     };
 
     const changeConfigAccess = () => {
-        if (!accessAction)
-            return;
-
-        const enabled = accessAction === 'enable';
-        setAccessAction(null);
+        setShowEnableAccessDialog(false);
         setAccessError(null);
-        setAccessUpdated(false);
         setAccessPending(true);
-        setConfigFullAccess(enabled)
+        setConfigFullAccess(true)
                 .then(() => {
-                    setForm(current => current ? { ...current, config_full_access: enabled } : current);
-                    setAccessUpdated(true);
+                    setForm(current => current ? { ...current, config_full_access: true } : current);
                 })
                 .catch(err => setAccessError(cockpit.message(err)))
                 .finally(() => setAccessPending(false));
@@ -171,6 +153,7 @@ export const SettingsTab = ({ config, security }: { config?: Config | undefined,
                 <StackItem>
                     <Alert variant="info" isInline title={ _("Restricted access mode") }>
                         <p>{ _("SnapRAID's default setting keeps scripts, commands, and user settings read-only in Cockpit. They are normally set outside Cockpit in the SnapRAID-Daemon configuration file, /etc/snapraidd.conf.") }</p>
+                        <p>{ _("Enable the setting below to let Cockpit administrator authorization manage these fields here.") }</p>
                         { !canEnableRestrictedSettings &&
                             <p>{ _("To make these settings available in Cockpit, first enable the root-only local API guard and bind SnapRAID-Daemon only to loopback.") }</p> }
                         <div className="snapraid-config-access-action">
@@ -178,25 +161,9 @@ export const SettingsTab = ({ config, security }: { config?: Config | undefined,
                                 variant="secondary"
                                 isDisabled={ !canEnableRestrictedSettings || accessPending }
                                 isLoading={ accessPending }
-                                onClick={ () => setAccessAction('enable') }
+                                onClick={ () => setShowEnableAccessDialog(true) }
                             >
                                 {_("Enable restricted settings")}
-                            </Button>
-                        </div>
-                    </Alert>
-                </StackItem> }
-            { fullAccess &&
-                <StackItem>
-                    <Alert variant="warning" isInline title={ _("Restricted settings enabled") }>
-                        <p>{ _("SnapRAID-Daemon is allowing Cockpit administrators to edit scripts, commands, and user settings.") }</p>
-                        <div className="snapraid-config-access-action">
-                            <Button
-                                variant="secondary"
-                                isDisabled={ accessPending }
-                                isLoading={ accessPending }
-                                onClick={ () => setAccessAction('restrict') }
-                            >
-                                {_("Restrict settings")}
                             </Button>
                         </div>
                     </Alert>
@@ -204,10 +171,6 @@ export const SettingsTab = ({ config, security }: { config?: Config | undefined,
             { accessError &&
                 <StackItem>
                     <Alert variant="danger" isInline title={ _("Restricted settings change failed") }>{ accessError }</Alert>
-                </StackItem> }
-            { accessUpdated &&
-                <StackItem>
-                    <Alert variant="success" isInline title={ _("Restricted settings updated") } />
                 </StackItem> }
             { error &&
                 <StackItem>
@@ -366,10 +329,10 @@ form={ form } field="hook_run_as_user" label={ _("Run hook as user") }
                 </Button>
             </StackItem>
             <ConfigAccessModal
-                action={ accessAction }
+                isOpen={ showEnableAccessDialog }
                 isBusy={ accessPending }
                 onConfirm={ changeConfigAccess }
-                onCancel={ () => setAccessAction(null) }
+                onCancel={ () => setShowEnableAccessDialog(false) }
             />
         </Stack>
     );
