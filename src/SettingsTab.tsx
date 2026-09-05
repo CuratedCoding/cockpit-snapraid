@@ -48,11 +48,11 @@ const ConfigAccessModal = (
                     ? <>
                         <p>{ _("This allows Cockpit administrators to edit hook and notification commands, including the account used to run them.") }</p>
                         <p>{ _("Only net_config_full_access in snapraidd.conf will change. SnapRAID-Daemon will reload; no array operation will run.") }</p>
-                    </>
+                      </>
                     : <>
                         <p>{ _("This makes hook and notification command settings read-only in Cockpit again. Existing values are preserved.") }</p>
                         <p>{ _("Only net_config_full_access in snapraidd.conf will change. SnapRAID-Daemon will reload; no array operation will run.") }</p>
-                    </> }
+                      </> }
             </ModalBody>
             <ModalFooter>
                 <Button
