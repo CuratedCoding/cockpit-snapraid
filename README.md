@@ -1,4 +1,131 @@
-# SnapRAID Cockpit Plugin
+# SnapRAID Cockpit Plugin: CuratedCoding fork
+
+This project starts with the thoughtful work of [sloraris](https://github.com/sloraris),
+who made SnapRAID-Daemon's capabilities available as a native Cockpit page instead
+of an unauthenticated web dashboard. That is a strong foundation for people who
+want to understand and manage a SnapRAID array without turning routine storage
+administration into a programming exercise.
+
+CuratedCoding is building on that foundation with carefully scoped safeguards for
+systems where the array matters. The fork keeps the original interface and daemon,
+then adds Cockpit administrator authorization, protection for the daemon's local
+API, clearer operational warnings, and a supported SnapRAID version boundary. It
+does not change how SnapRAID protects data, and it is not a replacement for a
+backup plan.
+
+> [!NOTE]
+> **Authorship and scope:** Everything from this introduction through **Project
+> status** is CuratedCoding documentation about this fork. The section marked
+> **Original upstream README material** is reproduced from the upstream project
+> for reference; CuratedCoding does not claim authorship of it.
+>
+> All CuratedCoding coding work in this branch was performed by OpenAI Codex CLI
+> GPT-5.6 and curated and reviewed by the repository maintainer.
+
+## What this fork adds
+
+- **Administrator-gated access**: the page asks Cockpit for privileged access
+  before it reads from or sends commands to SnapRAID-Daemon. A regular Cockpit
+  account cannot use the page to operate an array.
+- **Protection from ordinary local accounts**: the Debian package installs a
+  root-only `nftables` rule around SnapRAID-Daemon's loopback API. Cockpit's
+  authorized privileged bridge can reach the daemon; unprivileged local processes
+  cannot bypass Cockpit and call that API directly.
+- **More deliberate operations**: maintenance, standalone sync, and recovery
+  flows explain their consequences before they queue work. Array refresh remains
+  a separate, non-maintenance command.
+- **A defined compatibility floor**: commands are disabled when the detected
+  SnapRAID engine is older than 14.1, because the supported daemon protocol does
+  not work reliably with SnapRAID 12.x.
+
+## CuratedCoding requirements
+
+This fork requires SnapRAID 14.1 or newer and a locally running
+SnapRAID-Daemon. For the local API protection to apply, the daemon must be bound
+to loopback and the Debian package must be installed on a systemd system with
+`nftables`. The exact network configuration and security boundaries are in
+[SECURITY.md](docs/SECURITY.md).
+
+## Security and support boundaries
+
+These protections are useful boundaries, not magic. Keep SnapRAID-Daemon bound
+to `127.0.0.1` or `::1`; do not expose its API to a LAN, reverse proxy, or the
+internet. A process that already has root access can act as root and is outside
+the local API guard's scope. Direct use of the `snapraid` command, SnapRAID's
+configuration, MergerFS, disks, parity, and backups remain the administrator's
+responsibility.
+
+Read [our security model](docs/SECURITY.md) for the precise boundary and
+[CuratedCoding's project notes](docs/CURATEDCODING.md) for design choices,
+validation, tradeoffs, and the relationship with upstream.
+
+## Project status
+
+The CuratedCoding changes currently live on the
+[`curated/security-hardening`](https://github.com/CuratedCoding/cockpit-snapraid/tree/curated/security-hardening) branch and
+are under maintainer review. They have not been proposed to upstream and
+CuratedCoding has not published a release. Treat a branch build as review or
+testing material, not as a broadly supported distribution package.
+
+## Install this CuratedCoding branch
+
+This fork has not published a release yet. The steps below are for an
+administrator who deliberately wants to build the current evaluation branch on
+a Debian or Ubuntu system. A future CuratedCoding release will provide a
+versioned package, checksum, and shorter installation steps.
+
+Before continuing, install and configure these separately:
+
+- Cockpit, including `cockpit-bridge`
+- SnapRAID 14.1 or newer
+- SnapRAID-Daemon, running only on loopback at port 7627
+
+Confirm the engine version and daemon status before building the extension:
+
+```bash
+snapraid --version
+systemctl status snapraidd --no-pager
+```
+
+The SnapRAID version must be 14.1 or newer, and the `snapraidd` service should
+be active. This extension does not install or configure SnapRAID, the daemon,
+MergerFS, disks, parity, shares, or backups.
+
+Install the build tools, download this branch, build the Debian package, and
+install it:
+
+```bash
+sudo apt update
+sudo apt install --yes git gettext nodejs npm make
+git clone --branch curated/security-hardening --single-branch https://github.com/CuratedCoding/cockpit-snapraid.git
+cd cockpit-snapraid
+make deb
+sudo apt install ./cockpit-snapraid_*.deb
+```
+
+The package installs `nftables` if needed and enables
+`cockpit-snapraid-api-guard.service`. Confirm that the protection is loaded:
+
+```bash
+sudo systemctl status cockpit-snapraid-api-guard.service --no-pager
+```
+
+It should report `active (exited)`. Sign in to Cockpit as an administrator,
+reload the browser page, and open **SnapRAID** from Cockpit's menu. The Settings
+tab reports whether the local API guard and loopback-only daemon listener are
+detected.
+
+> [!CAUTION]
+> Building a branch gives you its current development state, not a supported
+> release. Read the change history, make backups, and do not run a state-changing
+> SnapRAID operation until you have reviewed the array's differences and status.
+
+## Original upstream README material
+
+The material below was written by sloraris and copied from the upstream `main`
+branch at the fork's starting point. It is included so the original project
+description, feature list, screenshots, installation instructions, and
+development notes remain available alongside CuratedCoding's fork notes above.
 
 > [!WARNING]
 > This plugin is primarily developed as a personal project. It is currently in beta (as beta as my homelab prod gets, that is). Use at your own risk.
@@ -9,18 +136,9 @@ A native [Cockpit](https://cockpit-project.org/) page for [snapraid-daemon](http
 
 `snapraid-daemon`'s built-in web UI has no authentication and no TLS, so it's
 not safe to expose on the network as-is. This plugin talks to the daemon's
-REST API over `127.0.0.1` through a privileged `cockpit-bridge` channel. Cockpit
-therefore authenticates the user and requires administrative access before the
-plugin can reach the daemon. The daemon must remain bound to loopback; do not
-expose its unauthenticated API directly to the LAN.
-
-Loopback binding is not authentication against other local processes. The
-Debian package installs a root-only `nftables` rule for port 7627 and enables
-it on systemd hosts, so the privileged Cockpit bridge can reach the daemon but
-ordinary local accounts cannot. The page warns when this rule is missing and
-records an explicit, root-owned acknowledgement if an administrator chooses to
-suppress that warning. The rule cannot protect a daemon bound to a LAN address:
-keep the daemon bound to loopback.
+REST API over `127.0.0.1` through `cockpit-bridge` instead, so it inherits
+Cockpit's TLS, auth, and session handling for free, and looks like a native
+part of Cockpit rather than an embedded third-party dashboard.
 
 ## Features
 
@@ -61,20 +179,7 @@ keep the daemon bound to loopback.
 - `snapraid-daemon` running locally with its REST API enabled, bound to
   `127.0.0.1:7627` (see `snapraidd.conf`'s `net_port` / `net_acl`) — not
   exposed on the LAN, since the plugin reaches it locally through the bridge
-- SnapRAID 14.1 or newer (the official SnapRAID-Daemon Debian package requires
-  this minimum; the daemon's command and log protocols are not
-  compatible with SnapRAID 12.x)
 - Cockpit (`cockpit-bridge` ≥ 137)
-
-Recommended daemon network settings:
-
-```ini
-net_enabled = 1
-net_port = 127.0.0.1:7627
-net_acl = +127.0.0.1
-net_allowed_origin = none
-net_config_full_access = 0
-```
 
 ## Install
 
@@ -87,12 +192,6 @@ sudo apt install ./cockpit-snapraid_*_all.deb
 
 Reload Cockpit in your browser afterward. A new `.deb` is published automatically
 whenever a change lands on `main`.
-
-On systemd hosts, the package enables `cockpit-snapraid-api-guard.service`
-immediately and at boot. Administrators who deliberately need another local
-process to call the daemon can disable it with `sudo systemctl disable --now
-cockpit-snapraid-api-guard.service`; Cockpit will show the local API warning
-unless it is acknowledged in the page.
 
 ## Development
 
