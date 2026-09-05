@@ -29,6 +29,16 @@ p {
 .snapraid-mb-md { margin-block-end: var(--pf-t--global--spacer--md); }
 .snapraid-mr-sm { margin-inline-end: var(--pf-t--global--spacer--sm); }
 
+.snapraid-config-access-action {
+    inline-size: min(50%, 16rem);
+    min-inline-size: 13rem;
+    margin-block-start: var(--pf-t--global--spacer--md);
+}
+
+.snapraid-config-access-action .pf-v6-c-button {
+    inline-size: 100%;
+}
+
 // Gallery cards (disks, settings, recovery) otherwise blend into the page
 // background with no visible separation.
 .snapraid-page .pf-v6-c-card {

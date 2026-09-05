@@ -38,8 +38,11 @@ const ConfigAccessModal = (
 
     const enabling = action === 'enable';
     const explanation = enabling
-        ? _("This allows Cockpit administrators to edit hook and notification commands, including the account used to run them.")
-        : _("This makes hook and notification command settings read-only in Cockpit again. Existing values are preserved.");
+        ? _("SnapRAID-Daemon requires this setting before it will accept changes to scripts, commands, and users from Cockpit.")
+        : _("This returns scripts, commands, and user settings to read-only mode in Cockpit. Existing values are preserved.");
+    const configurationChange = enabling
+        ? _("Enabling sets net_config_full_access = 1 in /etc/snapraidd.conf. SnapRAID-Daemon will reload to read the new configuration.")
+        : _("Restricting sets net_config_full_access = 0 in /etc/snapraidd.conf. SnapRAID-Daemon will reload to read the new configuration.");
     return (
         <Modal isOpen onClose={ onCancel } variant="small">
             <ModalHeader
@@ -48,7 +51,7 @@ const ConfigAccessModal = (
             />
             <ModalBody>
                 <p>{ explanation }</p>
-                <p>{ _("Only net_config_full_access in snapraidd.conf will change. SnapRAID-Daemon will reload; no array operation will run.") }</p>
+                <p>{ configurationChange }</p>
             </ModalBody>
             <ModalFooter>
                 <Button
@@ -167,31 +170,35 @@ export const SettingsTab = ({ config, security }: { config?: Config | undefined,
             { !fullAccess &&
                 <StackItem>
                     <Alert variant="info" isInline title={ _("Restricted access mode") }>
-                        <p>{ _("Security-sensitive settings (scripts, commands, users) are read-only because net_config_full_access is disabled.") }</p>
+                        <p>{ _("SnapRAID's default setting keeps scripts, commands, and user settings read-only in Cockpit. They are normally set outside Cockpit in the SnapRAID-Daemon configuration file, /etc/snapraidd.conf.") }</p>
                         { !canEnableRestrictedSettings &&
-                            <p>{ _("Enable the root-only local API guard and bind SnapRAID-Daemon only to loopback before allowing Cockpit to edit these settings.") }</p> }
-                        <Button
-                            variant="secondary"
-                            isDisabled={ !canEnableRestrictedSettings || accessPending }
-                            isLoading={ accessPending }
-                            onClick={ () => setAccessAction('enable') }
-                        >
-                            {_("Enable restricted settings")}
-                        </Button>
+                            <p>{ _("To make these settings available in Cockpit, first enable the root-only local API guard and bind SnapRAID-Daemon only to loopback.") }</p> }
+                        <div className="snapraid-config-access-action">
+                            <Button
+                                variant="secondary"
+                                isDisabled={ !canEnableRestrictedSettings || accessPending }
+                                isLoading={ accessPending }
+                                onClick={ () => setAccessAction('enable') }
+                            >
+                                {_("Enable restricted settings")}
+                            </Button>
+                        </div>
                     </Alert>
                 </StackItem> }
             { fullAccess &&
                 <StackItem>
                     <Alert variant="warning" isInline title={ _("Restricted settings enabled") }>
-                        <p>{ _("Cockpit administrators can edit hook and notification commands, including the account used to run them.") }</p>
-                        <Button
-                            variant="secondary"
-                            isDisabled={ accessPending }
-                            isLoading={ accessPending }
-                            onClick={ () => setAccessAction('restrict') }
-                        >
-                            {_("Restrict settings")}
-                        </Button>
+                        <p>{ _("SnapRAID-Daemon is allowing Cockpit administrators to edit scripts, commands, and user settings.") }</p>
+                        <div className="snapraid-config-access-action">
+                            <Button
+                                variant="secondary"
+                                isDisabled={ accessPending }
+                                isLoading={ accessPending }
+                                onClick={ () => setAccessAction('restrict') }
+                            >
+                                {_("Restrict settings")}
+                            </Button>
+                        </div>
                     </Alert>
                 </StackItem> }
             { accessError &&
