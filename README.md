@@ -91,6 +91,18 @@ The SnapRAID version must be 14.1 or newer, and the `snapraidd` service should
 be active. This extension does not install or configure SnapRAID, the daemon,
 MergerFS, disks, parity, shares, or backups.
 
+> [!WARNING]
+> This evaluation branch uses a development package version. Debian may describe
+> its installation as a **downgrade** when an upstream stable package is already
+> installed, even though the branch contains newer fork changes. Check the
+> installed version first and do not approve a downgrade on a production system.
+> A disposable test machine is the appropriate place to make that deliberate
+> comparison.
+
+```bash
+dpkg-query -W -f='${Version}\n' cockpit-snapraid 2>/dev/null || true
+```
+
 Install the build tools, download this branch, build the Debian package, and
 install it:
 
@@ -114,6 +126,18 @@ It should report `active (exited)`. Sign in to Cockpit as an administrator,
 reload the browser page, and open **SnapRAID** from Cockpit's menu. The Settings
 tab reports whether the local API guard and loopback-only daemon listener are
 detected.
+
+If this machine has ever used `make devel-install` or another user-local
+development copy of the extension, verify that Cockpit selected the packaged
+copy. Run this as the same account used to sign in to Cockpit:
+
+```bash
+cockpit-bridge --packages | grep '^snapraid'
+```
+
+The path must be `/usr/share/cockpit/snapraid`. A path under
+`~/.local/share/cockpit/` is a development copy that overrides the package;
+move that directory outside Cockpit's package search path, then reload Cockpit.
 
 > [!CAUTION]
 > Building a branch gives you its current development state, not a supported
