@@ -24,6 +24,7 @@ const _ = cockpit.gettext;
 
 const STATE_DIRECTORY = "/var/lib/cockpit-snapraid";
 const ACKNOWLEDGEMENT_FILE = `${STATE_DIRECTORY}/local-api-warning-acknowledged`;
+const SECURITY_POLL_INTERVAL_MS = 30000;
 
 type ListenerScope = 'loopback' | 'network' | 'not-running' | 'unknown';
 
@@ -128,14 +129,20 @@ export const useLocalApiSecurity = () => {
     const [actionError, setActionError] = useState<string | null>(null);
     const [actionPending, setActionPending] = useState(false);
 
-    const refresh = useCallback(async () => {
-        setState(previous => ({ ...previous, loading: true }));
+    const refresh = useCallback(async (showLoading = true) => {
+        if (showLoading)
+            setState(previous => ({ ...previous, loading: true }));
         const next = await readSecurityState();
         setState({ ...next, loading: false });
     }, []);
 
     useEffect(() => {
         refresh();
+        const interval = window.setInterval(() => {
+            refresh(false);
+        }, SECURITY_POLL_INTERVAL_MS);
+
+        return () => window.clearInterval(interval);
     }, [refresh]);
 
     const acknowledge = async () => {
