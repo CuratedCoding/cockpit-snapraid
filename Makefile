@@ -9,7 +9,8 @@ VERSION := $(shell \
 	if [ -z "$$T" ]; then \
 		D=$$(git log -1 --format=%cd --date=format:%Y%m%d 2>/dev/null || echo 0); \
 		R=$$(git rev-parse --short=12 HEAD 2>/dev/null || echo unknown); \
-		T=0.0.0~git$$D.g$$R; \
+		N=$$(git rev-list --count HEAD 2>/dev/null || echo 0); \
+		T=0.0.1~git$$D.$$N.g$$R; \
 	fi; \
 	echo $$T | tr '-' '.')
 ifeq ($(TEST_OS),)

@@ -96,7 +96,6 @@ export const ActionsCard = (
     const active = tasks?.active?.[0];
     const pendingCount = tasks?.pending?.length ?? 0;
     const isBusy = !!active || !!state?.active_command;
-    const isBadHealth = array?.health === 'failing' || array?.health === 'prefail';
     const operationsDisabled = !isSupportedEngineVersion(array?.engine_version);
 
     const trigger = (command: Command) => {
@@ -159,12 +158,16 @@ export const ActionsCard = (
                             {_("Run maintenance")}
                         </Button>
                     </FlexItem>
-                    { isBadHealth &&
-                        <FlexItem>
-                            <Button variant="secondary" isLoading={ refreshing } onClick={ runRefresh }>
-                                {_("Refresh array state")}
-                            </Button>
-                        </FlexItem> }
+                    <FlexItem>
+                        <Button
+                            variant="secondary"
+                            isLoading={ refreshing }
+                            isDisabled={ isBusy || operationsDisabled || refreshing }
+                            onClick={ runRefresh }
+                        >
+                            {_("Refresh array state")}
+                        </Button>
+                    </FlexItem>
                 </Flex>
 
                 <Flex>
