@@ -11,6 +11,7 @@ import { Modal, ModalBody, ModalFooter, ModalHeader } from "@patternfly/react-co
 import { Progress } from "@patternfly/react-core/dist/esm/components/Progress/index.js";
 import { Switch } from "@patternfly/react-core/dist/esm/components/Switch/index.js";
 import { Flex, FlexItem } from "@patternfly/react-core/dist/esm/layouts/Flex/index.js";
+import RedoIcon from '@patternfly/react-icons/dist/esm/icons/redo-icon';
 
 import cockpit from 'cockpit';
 
@@ -160,10 +161,11 @@ export const ActionsCard = (
                     </FlexItem>
                     <FlexItem>
                         <Button
-                            variant="secondary"
+                            variant="primary"
                             isLoading={ refreshing }
                             isDisabled={ isBusy || operationsDisabled || refreshing }
                             onClick={ runRefresh }
+                            icon={ <RedoIcon /> }
                         >
                             {_("Refresh array state")}
                         </Button>
