@@ -28,6 +28,16 @@ export const Application = () => {
     const [historyLimit, setHistoryLimit] = useState(HISTORY_INITIAL_LIMIT);
     const data = useSnapraidData(historyLimit);
 
+    if (data.accessDenied) {
+        return (
+            <div className="snapraid-page">
+                <Alert variant="danger" title={ _("Administrative access required") }>
+                    { _("Only administrators can view or operate the SnapRAID array.") }
+                </Alert>
+            </div>
+        );
+    }
+
     return (
         <div className="snapraid-page">
             <HealthBanner array={ data.array } />

@@ -32,11 +32,17 @@ export interface SnapraidData {
     system?: SystemInfo;
     activity?: ActivityResponse;
     error?: string | undefined;
+    accessDenied: boolean;
     loading: boolean;
 }
 
+function isAccessDenied(error: unknown): boolean {
+    return typeof error === 'object' && error !== null &&
+        'problem' in error && (error as { problem?: unknown }).problem === 'access-denied';
+}
+
 export function useSnapraidData(historyLimit: number): SnapraidData {
-    const [data, setData] = useState<SnapraidData>({ loading: true });
+    const [data, setData] = useState<SnapraidData>({ accessDenied: false, loading: true });
 
     useEffect(() => {
         let cancelled = false;
@@ -88,7 +94,7 @@ export function useSnapraidData(historyLimit: number): SnapraidData {
                 const state = await getJSON<StateResponse>(http, "/snapraid/v1/state");
                 if (cancelled)
                     return;
-                setData(d => ({ ...d, state, error: undefined, loading: false }));
+                setData(d => ({ ...d, state, error: undefined, accessDenied: false, loading: false }));
 
                 const prev = lastPulse;
                 lastPulse = state.pulse;
@@ -121,8 +127,12 @@ export function useSnapraidData(historyLimit: number): SnapraidData {
                 await Promise.all(jobs);
             } catch (err) {
                 if (!cancelled)
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    setData(d => ({ ...d, error: cockpit.message(err as any), loading: false }));
+                    setData(d => ({
+                        ...d,
+                        error: cockpit.message(err as Parameters<typeof cockpit.message>[0]),
+                        accessDenied: isAccessDenied(err),
+                        loading: false,
+                    }));
             }
         }
 
