@@ -145,6 +145,16 @@ export const useLocalApiSecurity = () => {
         return () => window.clearInterval(interval);
     }, [refresh]);
 
+    useEffect(() => {
+        const refreshWhenVisible = () => {
+            if (!cockpit.hidden)
+                refresh(false);
+        };
+
+        cockpit.addEventListener("visibilitychange", refreshWhenVisible);
+        return () => cockpit.removeEventListener("visibilitychange", refreshWhenVisible);
+    }, [refresh]);
+
     const acknowledge = async () => {
         setActionError(null);
         setActionPending(true);

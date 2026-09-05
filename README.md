@@ -31,6 +31,10 @@ backup plan.
   root-only `nftables` rule around SnapRAID-Daemon's loopback API. Cockpit's
   authorized privileged bridge can reach the daemon; unprivileged local processes
   cannot bypass Cockpit and call that API directly.
+- **Current local API status**: when the page opens, becomes visible again, and
+  every 30 seconds while open, it rechecks the firewall guard and listener. This
+  uses local system status commands only; it does not contact SnapRAID-Daemon,
+  refresh array data, or start a SnapRAID task.
 - **More deliberate operations**: maintenance, standalone sync, and recovery
   flows explain their consequences before they queue work. Array refresh remains
   a separate, non-maintenance command.

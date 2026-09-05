@@ -63,6 +63,12 @@ extension checks for the rule and displays a warning if it is absent. An
 administrator can acknowledge that warning, which hides the notice but does not
 turn the guard back on or make the system safer.
 
+The extension rechecks the guard and listener when its page opens, when Cockpit
+shows the already-loaded page again, and every 30 seconds while it remains open.
+Those checks use only local `nftables` and socket-status commands. They do not
+contact SnapRAID-Daemon, refresh array data, start a SnapRAID command, alter a
+task, or replace array and log views.
+
 The guard requires `nftables` and systemd. If your distribution or operating
 model does not provide those pieces, the extension remains usable but shows the
 warning unless it is acknowledged. That is an intentionally visible tradeoff,

@@ -51,6 +51,13 @@ guard is absent, if the listener is exposed to the network, or if the listener
 cannot be verified. An acknowledgement suppresses only the missing-guard
 warning and is stored root-only so ordinary users cannot hide it.
 
+Cockpit keeps component pages loaded while they are hidden during navigation.
+This fork therefore rechecks only the local firewall and listener when the page
+is shown again, as well as every 30 seconds while it is open. That is not an
+array refresh: it runs local system-status checks and does not contact
+SnapRAID-Daemon, queue work, spin up disks, update task logs, or replace a
+SnapRAID view.
+
 See [SECURITY.md](SECURITY.md) for the exact boundary and limitations.
 
 ### Safer operational controls
