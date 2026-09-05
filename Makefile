@@ -1,7 +1,17 @@
 # extract name from package.json
 PACKAGE_NAME := $(shell awk '/"name":/ {gsub(/[",]/, "", $$2); print $$2}' package.json)
 RPM_NAME := cockpit-$(PACKAGE_NAME)
-VERSION := $(shell T=$$(git describe 2>/dev/null) || T=1; echo $$T | tr '-' '.')
+# Tagged builds retain their release version. Untagged worktrees must not fall
+# back to Debian version "1", as that would prevent a later 0.x release from
+# upgrading the locally built package.
+VERSION := $(shell \
+	T=$$(git describe --exact-match --tags 2>/dev/null || true); \
+	if [ -z "$$T" ]; then \
+		D=$$(git log -1 --format=%cd --date=format:%Y%m%d 2>/dev/null || echo 0); \
+		R=$$(git rev-parse --short=12 HEAD 2>/dev/null || echo unknown); \
+		T=0.0.0~git$$D.g$$R; \
+	fi; \
+	echo $$T | tr '-' '.')
 ifeq ($(TEST_OS),)
 TEST_OS = centos-9-stream
 endif

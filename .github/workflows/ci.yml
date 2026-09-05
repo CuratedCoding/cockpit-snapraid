@@ -54,6 +54,7 @@ jobs:
           package=$(find . -maxdepth 1 -name 'cockpit-snapraid_*_all.deb' -print -quit)
           test -n "$package"
           dpkg-deb --info "$package" >/dev/null
+          test "$(dpkg-deb -f "$package" Version)" != "1"
           dpkg-deb --contents "$package" | grep -F 'cockpit-snapraid-api-guard.nft'
           dpkg-deb --contents "$package" | grep -F 'cockpit-snapraid-api-guard.service'
           dpkg-deb --ctrl-tarfile "$package" | tar -tf - | grep -Fx './postinst'
