@@ -59,7 +59,7 @@ const SwitchField = (
     </FormGroup>
 );
 
-export const SettingsTab = ({ config }: { config?: Config | undefined }) => {
+export const SettingsTab = ({ config, isAdmin }: { config?: Config | undefined, isAdmin: boolean }) => {
     const [form, setForm] = useState<Config | null>(null);
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -80,6 +80,8 @@ export const SettingsTab = ({ config }: { config?: Config | undefined }) => {
     }
 
     const fullAccess = form.config_full_access !== false;
+    const readOnly = !isAdmin;
+    const fullAccessReadOnly = readOnly || !fullAccess;
 
     const setField = (field: keyof Config, value: string | number | boolean) => {
         setDirty(true);
@@ -125,21 +127,25 @@ export const SettingsTab = ({ config }: { config?: Config | undefined }) => {
                                 <TextField
 form={ form } field="maintenance_schedule" label={ _("Maintenance schedule") }
                                            help={ _("HH:MM or '<day> HH:MM'. Empty disables scheduled maintenance.") }
+                                           disabled={ readOnly }
                                            onChange={ setField }
                                 />
                                 <TextField
 form={ form } field="scrub_percentage" label={ _("Scrub percentage") }
                                            help={ _("Percent of the array verified per scheduled scrub. 0 disables scrub.") }
+                                           disabled={ readOnly }
                                            onChange={ setField }
                                 />
                                 <TextField
 form={ form } field="scrub_older_than" label={ _("Scrub older than (days)") }
                                            help={ _("Only scrub blocks not verified within this many days.") }
+                                           disabled={ readOnly }
                                            onChange={ setField }
                                 />
                                 <SwitchField
 form={ form } field="touch_zero_subseconds" label={ _("Touch zero subseconds") }
                                              help={ _("Align timestamps lacking sub-second precision before sync.") }
+                                             disabled={ readOnly }
                                              onChange={ setField }
                                 />
                             </Form>
@@ -153,21 +159,25 @@ form={ form } field="touch_zero_subseconds" label={ _("Touch zero subseconds") }
                                 <TextField
 form={ form } field="sync_threshold_deletes" label={ _("Deletes threshold") }
                                            help={ _("Suspend sync if deletions reach this count. 0 disables.") }
+                                           disabled={ readOnly }
                                            onChange={ setField }
                                 />
                                 <TextField
 form={ form } field="sync_threshold_updates" label={ _("Updates threshold") }
                                            help={ _("Suspend sync if updates reach this count. 0 disables.") }
+                                           disabled={ readOnly }
                                            onChange={ setField }
                                 />
                                 <SwitchField
 form={ form } field="sync_prehash" label={ _("Safety pre-hash") }
                                              help={ _("Pre-calculate hashes before sync to catch silent corruption.") }
+                                             disabled={ readOnly }
                                              onChange={ setField }
                                 />
                                 <SwitchField
 form={ form } field="sync_prevent_truncations" label={ _("Prevent file truncations") }
                                              help={ _("Stop sync if previously non-empty files are now empty.") }
+                                             disabled={ readOnly }
                                              onChange={ setField }
                                 />
                             </Form>
@@ -181,11 +191,13 @@ form={ form } field="sync_prevent_truncations" label={ _("Prevent file truncatio
                                 <TextField
 form={ form } field="probe_interval_minutes" label={ _("Probe interval (min)") }
                                            help={ _("How often to poll disk power/SMART state. 0 disables.") }
+                                           disabled={ readOnly }
                                            onChange={ setField }
                                 />
                                 <TextField
 form={ form } field="spindown_idle_minutes" label={ _("Spindown timeout (min)") }
                                            help={ _("Idle time before disks are spun down. 0 disables.") }
+                                           disabled={ readOnly }
                                            onChange={ setField }
                                 />
                             </Form>
@@ -198,12 +210,14 @@ form={ form } field="spindown_idle_minutes" label={ _("Spindown timeout (min)") 
                             <Form>
                                 <SwitchField
 form={ form } field="notify_syslog_enabled" label={ _("Enable syslog") }
+                                             disabled={ readOnly }
                                              onChange={ setField }
                                 />
                                 <FormGroup label={ _("Syslog level") } fieldId="notify_syslog_level">
                                     <FormSelect
                                         id="notify_syslog_level"
                                         value={ form.notify_syslog_level ?? "" }
+                                        isDisabled={ readOnly }
                                         onChange={ (_ev, v) => setField('notify_syslog_level', v) }
                                     >
                                         { LOG_LEVELS.map(l => <FormSelectOption key={ l } value={ l } label={ l } />) }
@@ -211,13 +225,14 @@ form={ form } field="notify_syslog_enabled" label={ _("Enable syslog") }
                                 </FormGroup>
                                 <SwitchField
 form={ form } field="notify_differences" label={ _("Include differences in reports") }
+                                             disabled={ readOnly }
                                              onChange={ setField }
                                 />
                                 <FormGroup label={ _("Result log level") } fieldId="notify_result_level">
                                     <FormSelect
                                         id="notify_result_level"
                                         value={ form.notify_result_level ?? "" }
-                                        isDisabled={ !fullAccess }
+                                        isDisabled={ fullAccessReadOnly }
                                         onChange={ (_ev, v) => setField('notify_result_level', v) }
                                     >
                                         { LOG_LEVELS.map(l => <FormSelectOption key={ l } value={ l } label={ l } />) }
@@ -225,15 +240,15 @@ form={ form } field="notify_differences" label={ _("Include differences in repor
                                 </FormGroup>
                                 <TextField
 form={ form } field="notify_heartbeat" label={ _("Heartbeat command (on success)") }
-                                           disabled={ !fullAccess } onChange={ setField }
+                                           disabled={ fullAccessReadOnly } onChange={ setField }
                                 />
                                 <TextField
 form={ form } field="notify_result" label={ _("Result command") }
-                                           disabled={ !fullAccess } onChange={ setField }
+                                           disabled={ fullAccessReadOnly } onChange={ setField }
                                 />
                                 <TextField
 form={ form } field="notify_run_as_user" label={ _("Run notifications as user") }
-                                           disabled={ !fullAccess } onChange={ setField }
+                                           disabled={ fullAccessReadOnly } onChange={ setField }
                                 />
                             </Form>
                         </CardBody>
@@ -245,11 +260,11 @@ form={ form } field="notify_run_as_user" label={ _("Run notifications as user") 
                             <Form>
                                 <TextField
 form={ form } field="hook_script" label={ _("Hook script path") }
-                                           disabled={ !fullAccess } onChange={ setField }
+                                           disabled={ fullAccessReadOnly } onChange={ setField }
                                 />
                                 <TextField
 form={ form } field="hook_run_as_user" label={ _("Run hook as user") }
-                                           disabled={ !fullAccess } onChange={ setField }
+                                           disabled={ fullAccessReadOnly } onChange={ setField }
                                 />
                             </Form>
                         </CardBody>
@@ -258,7 +273,7 @@ form={ form } field="hook_run_as_user" label={ _("Run hook as user") }
             </StackItem>
 
             <StackItem>
-                <Button variant="primary" isLoading={ saving } isDisabled={ !dirty } onClick={ save }>
+                <Button variant="primary" isLoading={ saving } isDisabled={ !isAdmin || !dirty } onClick={ save }>
                     {_("Save settings")}
                 </Button>
             </StackItem>

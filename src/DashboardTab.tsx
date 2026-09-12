@@ -13,9 +13,9 @@ import { SystemCard } from './SystemCard';
 import type { ActivityResponse, ArrayInfo, StateResponse, SystemInfo, TasksResponse } from './types';
 
 export const DashboardTab = (
-    { array, state, tasks, system, activity }: {
+    { array, state, tasks, system, activity, isAdmin }: {
         array?: ArrayInfo | undefined, state?: StateResponse | undefined, tasks?: TasksResponse | undefined,
-        system?: SystemInfo | undefined, activity?: ActivityResponse | undefined
+        system?: SystemInfo | undefined, activity?: ActivityResponse | undefined, isAdmin: boolean
     }
 ) => (
     <Stack hasGutter>
@@ -25,7 +25,7 @@ export const DashboardTab = (
         <StackItem>
             <Gallery hasGutter minWidths={ { default: '100%', md: '480px' } }>
                 <ArrayStatusCard array={ array } />
-                <ActionsCard state={ state } tasks={ tasks } array={ array } />
+                <ActionsCard state={ state } tasks={ tasks } array={ array } isAdmin={ isAdmin } />
                 <SystemCard system={ system } />
             </Gallery>
         </StackItem>

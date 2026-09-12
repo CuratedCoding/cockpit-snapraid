@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react';
 
 import cockpit from 'cockpit';
 
-import { daemonClient, getJSON, getJSONOrUndefined } from './daemon';
+import { daemonReadClient, getJSON, getJSONOrUndefined } from './daemon';
 import type { ActivityResponse, ArrayInfo, Config, DisksResponse, Pulse, StateResponse, SystemInfo, TasksResponse } from './types';
 
 const POLL_INTERVAL_MS = 3000;
@@ -40,7 +40,7 @@ export function useSnapraidData(historyLimit: number): SnapraidData {
 
     useEffect(() => {
         let cancelled = false;
-        const http = daemonClient();
+        const http = daemonReadClient();
         let lastPulse: Pulse | null = null;
         let lastSystemPollAt = 0;
 
