@@ -28,7 +28,7 @@ import type { ArrayInfo } from './types';
 
 const _ = cockpit.gettext;
 
-export const RecoveryTab = ({ array }: { array?: ArrayInfo | undefined }) => {
+export const RecoveryTab = ({ array, isAdmin }: { array?: ArrayInfo | undefined, isAdmin: boolean }) => {
     const [error, setError] = useState<string | null>(null);
     const [patterns, setPatterns] = useState("");
     const [undeleting, setUndeleting] = useState(false);
@@ -102,13 +102,14 @@ export const RecoveryTab = ({ array }: { array?: ArrayInfo | undefined }) => {
                             <TextArea
                                 value={ patterns }
                                 onChange={ (_ev, v) => setPatterns(v) }
+                                isDisabled={ !isAdmin }
                                 rows={ 5 }
                                 resizeOrientation="vertical"
                                 placeholder={ "*.mp4\nfamily_docs/*\nlost_file.txt" }
                                 aria-label={ _("Undelete file patterns") }
                                 className="snapraid-mb-md"
                             />
-                            <Button variant="primary" isLoading={ undeleting } onClick={ () => setPendingAction('undelete') }>
+                            <Button variant="primary" isLoading={ undeleting } isDisabled={ !isAdmin } onClick={ () => setPendingAction('undelete') }>
                                 {_("Undelete files")}
                             </Button>
                         </CardBody>
@@ -133,7 +134,7 @@ export const RecoveryTab = ({ array }: { array?: ArrayInfo | undefined }) => {
                             <Button
                                 variant="danger"
                                 isLoading={ healing }
-                                isDisabled={ !array.blocks_bad }
+                                isDisabled={ !isAdmin || !array.blocks_bad }
                                 onClick={ () => setPendingAction('heal') }
                             >
                                 {_("Heal silent errors")}
@@ -173,6 +174,7 @@ export const RecoveryTab = ({ array }: { array?: ArrayInfo | undefined }) => {
                 title={ _("Undelete files?") }
                 confirmLabel={ _("Undelete") }
                 isBusy={ undeleting }
+                isDisabled={ !isAdmin }
                 onConfirm={ runUndelete }
                 onCancel={ () => setPendingAction(null) }
                 message={
@@ -186,6 +188,7 @@ export const RecoveryTab = ({ array }: { array?: ArrayInfo | undefined }) => {
                             id="undelete-spindown-on-finish"
                             label={ _("Spin down all disks once finished") }
                             isChecked={ undeleteSpindown }
+                            isDisabled={ !isAdmin }
                             onChange={ (_ev, checked) => setUndeleteSpindown(checked) }
                         />
                     </>
@@ -197,6 +200,7 @@ export const RecoveryTab = ({ array }: { array?: ArrayInfo | undefined }) => {
                 title={ _("Heal silent errors?") }
                 confirmLabel={ _("Heal") }
                 isBusy={ healing }
+                isDisabled={ !isAdmin }
                 onConfirm={ runHeal }
                 onCancel={ () => setPendingAction(null) }
                 message={
@@ -211,6 +215,7 @@ export const RecoveryTab = ({ array }: { array?: ArrayInfo | undefined }) => {
                             id="heal-spindown-on-finish"
                             label={ _("Spin down all disks once finished") }
                             isChecked={ healSpindown }
+                            isDisabled={ !isAdmin }
                             onChange={ (_ev, checked) => setHealSpindown(checked) }
                         />
                     </>

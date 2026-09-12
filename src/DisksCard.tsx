@@ -197,7 +197,7 @@ const DiskCard = ({ disk, role, onShowSmart }: { disk: Disk, role: string, onSho
     );
 };
 
-export const DisksCard = ({ disks }: { disks?: DisksResponse | undefined }) => {
+export const DisksCard = ({ disks, isAdmin }: { disks?: DisksResponse | undefined, isAdmin: boolean }) => {
     const [smartDevice, setSmartDevice] = useState<Device | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [spinning, setSpinning] = useState<'up' | 'down' | null>(null);
@@ -220,7 +220,7 @@ export const DisksCard = ({ disks }: { disks?: DisksResponse | undefined }) => {
                             <FlexItem>
                                 <Button
                                     variant="secondary" size="sm"
-                                    isLoading={ spinning === 'up' } isDisabled={ !!spinning }
+                                    isLoading={ spinning === 'up' } isDisabled={ !isAdmin || !!spinning }
                                     onClick={ () => spin('up') }
                                 >
                                     {_("Spin up")}
@@ -229,7 +229,7 @@ export const DisksCard = ({ disks }: { disks?: DisksResponse | undefined }) => {
                             <FlexItem>
                                 <Button
                                     variant="secondary" size="sm"
-                                    isLoading={ spinning === 'down' } isDisabled={ !!spinning }
+                                    isLoading={ spinning === 'down' } isDisabled={ !isAdmin || !!spinning }
                                     onClick={ () => spin('down') }
                                 >
                                     {_("Spin down")}

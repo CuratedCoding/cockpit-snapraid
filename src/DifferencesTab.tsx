@@ -44,20 +44,22 @@ const DIFF_COUNT_FIELDS: [key: keyof ArrayInfo, label: string][] = [
 ];
 
 const UndeleteButton = (
-    { path, undeleting, onClick }: { path: string, undeleting: string | null, onClick: (path: string) => void }
+    { path, undeleting, isAdmin, onClick }: {
+        path: string, undeleting: string | null, isAdmin: boolean, onClick: (path: string) => void
+    }
 ) => (
     <Button
         variant="secondary"
         size="sm"
         isLoading={ undeleting === path }
-        isDisabled={ !!undeleting }
+        isDisabled={ !isAdmin || !!undeleting }
         onClick={ () => onClick(path) }
     >
         {_("Undelete")}
     </Button>
 );
 
-export const DifferencesTab = ({ array }: { array?: ArrayInfo | undefined }) => {
+export const DifferencesTab = ({ array, isAdmin }: { array?: ArrayInfo | undefined, isAdmin: boolean }) => {
     const [error, setError] = useState<string | null>(null);
     const [undeleting, setUndeleting] = useState<string | null>(null);
 
@@ -86,7 +88,7 @@ export const DifferencesTab = ({ array }: { array?: ArrayInfo | undefined }) => 
             { title: d.path },
             {
                 title: d.change === 'removed'
-                    ? <UndeleteButton path={ d.path } undeleting={ undeleting } onClick={ undeleteOne } />
+                    ? <UndeleteButton path={ d.path } undeleting={ undeleting } isAdmin={ isAdmin } onClick={ undeleteOne } />
                     : null,
             },
         ],

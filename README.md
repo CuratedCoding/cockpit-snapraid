@@ -13,6 +13,32 @@ REST API over `127.0.0.1` through `cockpit-bridge` instead, so it inherits
 Cockpit's TLS, auth, and session handling for free, and looks like a native
 part of Cockpit rather than an embedded third-party dashboard.
 
+## CuratedCoding Role-Aware Edition
+
+This fork is independently maintained and tested by CuratedCoding. It
+preserves the original Cockpit SnapRAID dashboard while adding Cockpit-native
+access levels for systems shared by more than one administrator.
+
+Limited Cockpit sessions can view array status, disks, tasks, differences,
+recovery history, and settings. Actions that change the array or its
+configuration remain unavailable until the user enables Cockpit
+**Administrative Access**. Every such request is also enforced through
+Cockpit's privileged channel; unlocking a button is not the security boundary.
+
+This is the standard CuratedCoding edition. It relies on Cockpit's normal
+authentication and authorization model, which makes it suitable when
+read-only dashboard access is useful.
+
+For systems that must prevent other local Linux accounts from connecting
+directly to SnapRAID-Daemon, use the separate
+`curated/security-hardening` branch. That edition adds a root-only local
+firewall guard, which intentionally prevents non-admin dashboard reads.
+
+The original project and dashboard design are credited to Sloraris.
+CuratedCoding changes are independently developed, reviewed, and tested.
+Development includes AI-assisted work by OpenAI Codex GPT-5.6, curated by
+CuratedCoding, the repository maintainer.
+
 ## Features
 
 - **Dashboard** — array health, disk role counts, sync/scrub/diff timestamps, maintenance controls (diff/sync/scrub, with live progress)

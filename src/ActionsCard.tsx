@@ -27,8 +27,8 @@ const COMMAND_LABEL: Record<string, string> = {
 };
 
 const MaintenanceDialog = (
-    { onClose, onConfirm }: {
-        onClose: () => void,
+    { isAdmin, onClose, onConfirm }: {
+        isAdmin: boolean, onClose: () => void,
         onConfirm: (opts: { ignore_thresholds: boolean, spindown_on_finish: boolean }) => void
     }
 ) => {
@@ -46,6 +46,7 @@ const MaintenanceDialog = (
                     id="maintenance-ignore-thresholds"
                     label={ _("Ignore delete/update safety thresholds") }
                     isChecked={ ignoreThresholds }
+                    isDisabled={ !isAdmin }
                     onChange={ (_ev, checked) => setIgnoreThresholds(checked) }
                     className="snapraid-mb-sm"
                 />
@@ -53,12 +54,14 @@ const MaintenanceDialog = (
                     id="maintenance-spindown-on-finish"
                     label={ _("Spin down all disks once finished") }
                     isChecked={ spindownOnFinish }
+                    isDisabled={ !isAdmin }
                     onChange={ (_ev, checked) => setSpindownOnFinish(checked) }
                 />
             </ModalBody>
             <ModalFooter>
                 <Button
                     variant="primary"
+                    isDisabled={ !isAdmin }
                     onClick={ () => onConfirm({ ignore_thresholds: ignoreThresholds, spindown_on_finish: spindownOnFinish }) }
                 >
                     {_("Start maintenance")}
@@ -79,8 +82,8 @@ export const formatEta = (seconds?: number): string | null => {
 };
 
 export const ActionsCard = (
-    { state, tasks, array }: {
-        state?: StateResponse | undefined, tasks?: TasksResponse | undefined, array?: ArrayInfo | undefined
+    { state, tasks, array, isAdmin }: {
+        state?: StateResponse | undefined, tasks?: TasksResponse | undefined, array?: ArrayInfo | undefined, isAdmin: boolean
     }
 ) => {
     const [error, setError] = useState<string | null>(null);
@@ -144,7 +147,7 @@ export const ActionsCard = (
                         <Button
                             variant="primary"
                             isLoading={ maintaining }
-                            isDisabled={ isBusy }
+                            isDisabled={ !isAdmin || isBusy }
                             onClick={ () => setShowMaintenanceDialog(true) }
                         >
                             {_("Run maintenance")}
@@ -152,7 +155,7 @@ export const ActionsCard = (
                     </FlexItem>
                     { isBadHealth &&
                         <FlexItem>
-                            <Button variant="secondary" isLoading={ refreshing } onClick={ runRefresh }>
+                            <Button variant="secondary" isLoading={ refreshing } isDisabled={ !isAdmin } onClick={ runRefresh }>
                                 {_("Refresh array state")}
                             </Button>
                         </FlexItem> }
@@ -163,7 +166,7 @@ export const ActionsCard = (
                         <FlexItem key={ cmd }>
                             <Button
                                 variant="secondary"
-                                isDisabled={ isBusy }
+                                isDisabled={ !isAdmin || isBusy }
                                 isLoading={ triggering === cmd }
                                 onClick={ () => trigger(cmd) }
                             >
@@ -173,7 +176,7 @@ export const ActionsCard = (
                     )) }
                     { isBusy &&
                         <FlexItem>
-                            <Button variant="danger" onClick={ stop }>{_("Stop")}</Button>
+                            <Button variant="danger" isDisabled={ !isAdmin } onClick={ stop }>{_("Stop")}</Button>
                         </FlexItem> }
                 </Flex>
 
@@ -212,14 +215,14 @@ export const ActionsCard = (
                         id="hold-off"
                         label={ _("Hold off next scheduled maintenance") }
                         isChecked={ !!array?.hold_off }
-                        isDisabled={ togglingHoldOff }
+                        isDisabled={ !isAdmin || togglingHoldOff }
                         onChange={ (_ev, checked) => toggleHoldOff(checked) }
                     />
                 </div>
             </CardBody>
 
             { showMaintenanceDialog &&
-                <MaintenanceDialog onClose={ () => setShowMaintenanceDialog(false) } onConfirm={ runMaintenance } /> }
+                <MaintenanceDialog isAdmin={ isAdmin } onClose={ () => setShowMaintenanceDialog(false) } onConfirm={ runMaintenance } /> }
         </Card>
     );
 };

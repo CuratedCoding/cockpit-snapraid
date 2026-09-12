@@ -6,19 +6,27 @@
  * of the unauthenticated daemon port is needed).
  */
 
-import cockpit from 'cockpit';
+import cockpit, { type HttpInstance } from 'cockpit';
 
 import type { CommandOptions, Config } from './types';
 
 export const DAEMON_PORT = "7627";
 export const DAEMON_ADDRESS = "127.0.0.1";
 
-export function daemonClient() {
+export type DaemonClient = HttpInstance<string>;
+
+export function daemonReadClient(): DaemonClient {
     return cockpit.http(DAEMON_PORT, { address: DAEMON_ADDRESS });
 }
 
+// Every state-changing daemon request must cross Cockpit's privileged bridge.
+// UI disabled states guide the user, but Cockpit authorization is the boundary.
+export function daemonAdminClient(): DaemonClient {
+    return cockpit.http(DAEMON_PORT, { address: DAEMON_ADDRESS, superuser: "require" });
+}
+
 export async function getJSON<T>(
-    http: ReturnType<typeof daemonClient>,
+    http: DaemonClient,
     path: string,
     params?: Record<string, string | number>
 ): Promise<T> {
@@ -40,7 +48,7 @@ export async function getJSON<T>(
 // error, so widening getJSON itself would push an `!== undefined` guard onto
 // every one of those callers instead of just this one.
 export async function getJSONOrUndefined<T>(
-    http: ReturnType<typeof daemonClient>,
+    http: DaemonClient,
     path: string,
     params?: Record<string, string | number>
 ): Promise<T | undefined> {
@@ -49,7 +57,7 @@ export async function getJSONOrUndefined<T>(
 }
 
 export async function scheduleCommands(commands: string[]): Promise<void> {
-    const http = daemonClient();
+    const http = daemonAdminClient();
     try {
         await http.post("/snapraid/v1/schedule", { tasks: commands.map(command => ({ command })) });
     } finally {
@@ -58,7 +66,7 @@ export async function scheduleCommands(commands: string[]): Promise<void> {
 }
 
 export async function stopActiveTask(): Promise<void> {
-    const http = daemonClient();
+    const http = daemonAdminClient();
     try {
         await http.post("/snapraid/v1/stop");
     } finally {
@@ -67,7 +75,7 @@ export async function stopActiveTask(): Promise<void> {
 }
 
 export async function undeleteFiles(filters?: string[], options?: Omit<CommandOptions, 'filters'>): Promise<void> {
-    const http = daemonClient();
+    const http = daemonAdminClient();
     try {
         await http.post("/snapraid/v1/undelete", { ...options, ...(filters?.length ? { filters } : {}) });
     } finally {
@@ -76,7 +84,7 @@ export async function undeleteFiles(filters?: string[], options?: Omit<CommandOp
 }
 
 export async function healArray(options?: CommandOptions): Promise<void> {
-    const http = daemonClient();
+    const http = daemonAdminClient();
     try {
         await http.post("/snapraid/v1/heal", { ...options });
     } finally {
@@ -85,7 +93,7 @@ export async function healArray(options?: CommandOptions): Promise<void> {
 }
 
 export async function startMaintenance(options?: CommandOptions): Promise<void> {
-    const http = daemonClient();
+    const http = daemonAdminClient();
     try {
         await http.post("/snapraid/v1/maintenance", { ...options });
     } finally {
@@ -94,7 +102,7 @@ export async function startMaintenance(options?: CommandOptions): Promise<void> 
 }
 
 export async function requestRefresh(): Promise<void> {
-    const http = daemonClient();
+    const http = daemonAdminClient();
     try {
         await http.post("/snapraid/v1/refresh");
     } finally {
@@ -103,7 +111,7 @@ export async function requestRefresh(): Promise<void> {
 }
 
 export async function setHoldOff(enabled: boolean): Promise<void> {
-    const http = daemonClient();
+    const http = daemonAdminClient();
     try {
         await http.post("/snapraid/v1/hold_off", { enabled });
     } finally {
@@ -112,7 +120,7 @@ export async function setHoldOff(enabled: boolean): Promise<void> {
 }
 
 export async function patchConfig(partial: Partial<Config>): Promise<void> {
-    const http = daemonClient();
+    const http = daemonAdminClient();
     try {
         // .post() JSON-encodes plain-object bodies for us, but it's hardcoded to
         // method POST, so PATCH has to go through request() and do that manually.

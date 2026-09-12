@@ -17,6 +17,7 @@ import { HealthBanner } from './HealthBanner';
 import { RecoveryTab } from './RecoveryTab';
 import { SettingsTab } from './SettingsTab';
 import { HISTORY_INITIAL_LIMIT, TasksTab } from './TasksTab';
+import { useCockpitAdmin } from './useCockpitAdmin';
 import { useSnapraidData } from './useSnapraidData';
 
 const _ = cockpit.gettext;
@@ -27,10 +28,15 @@ export const Application = () => {
     const [activeTab, setActiveTab] = useState<TabKey>('dashboard');
     const [historyLimit, setHistoryLimit] = useState(HISTORY_INITIAL_LIMIT);
     const data = useSnapraidData(historyLimit);
+    const isAdmin = useCockpitAdmin();
 
     return (
         <div className="snapraid-page">
             <HealthBanner array={ data.array } />
+            { !isAdmin &&
+            <Alert variant="info" title={ _("Read-only access") } className="snapraid-mb-md">
+                { _("You can view SnapRAID status. Enable Administrative Access in Cockpit to manage the array or change settings.") }
+            </Alert> }
             { data.error &&
             <Alert variant="danger" title={ _("Failed to reach snapraid-daemon") } className="snapraid-mb-md">
                 { data.error }
@@ -45,13 +51,13 @@ export const Application = () => {
                     <div className="snapraid-mt-md">
                         <DashboardTab
                                 array={ data.array } state={ data.state } tasks={ data.tasks }
-                                system={ data.system } activity={ data.activity }
+                                system={ data.system } activity={ data.activity } isAdmin={ isAdmin }
                         />
                     </div>
                 </Tab>
                 <Tab eventKey="disks" title={ <TabTitleText>{_("Disks")}</TabTitleText> }>
                     <div className="snapraid-mt-md">
-                        <DisksCard disks={ data.disks } />
+                        <DisksCard disks={ data.disks } isAdmin={ isAdmin } />
                     </div>
                 </Tab>
                 <Tab eventKey="tasks" title={ <TabTitleText>{_("Tasks")}</TabTitleText> }>
@@ -65,17 +71,17 @@ export const Application = () => {
                 </Tab>
                 <Tab eventKey="differences" title={ <TabTitleText>{_("Differences")}</TabTitleText> }>
                     <div className="snapraid-mt-md">
-                        <DifferencesTab array={ data.array } />
+                        <DifferencesTab array={ data.array } isAdmin={ isAdmin } />
                     </div>
                 </Tab>
                 <Tab eventKey="recovery" title={ <TabTitleText>{_("Recovery")}</TabTitleText> }>
                     <div className="snapraid-mt-md">
-                        <RecoveryTab array={ data.array } />
+                        <RecoveryTab array={ data.array } isAdmin={ isAdmin } />
                     </div>
                 </Tab>
                 <Tab eventKey="settings" title={ <TabTitleText>{_("Settings")}</TabTitleText> }>
                     <div className="snapraid-mt-md">
-                        <SettingsTab config={ data.config } />
+                        <SettingsTab config={ data.config } isAdmin={ isAdmin } />
                     </div>
                 </Tab>
             </Tabs>
