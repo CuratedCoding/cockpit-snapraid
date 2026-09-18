@@ -62,6 +62,7 @@ const SwitchField = (
 export const SettingsTab = ({ config, isAdmin }: { config?: Config | undefined, isAdmin: boolean }) => {
     const [form, setForm] = useState<Config | null>(null);
     const [dirty, setDirty] = useState(false);
+    const [dirtyFields, setDirtyFields] = useState<ReadonlySet<keyof Config>>(new Set());
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [saved, setSaved] = useState(false);
@@ -85,16 +86,22 @@ export const SettingsTab = ({ config, isAdmin }: { config?: Config | undefined, 
 
     const setField = (field: keyof Config, value: string | number | boolean) => {
         setDirty(true);
+        setDirtyFields(fields => new Set(fields).add(field));
         setSaved(false);
         setForm(f => (f ? { ...f, [field]: value } : f));
     };
 
     const save = () => {
+        const changes = Object.fromEntries(
+            Array.from(dirtyFields, field => [field, form[field]])
+        ) as Partial<Config>;
+
         setError(null);
         setSaving(true);
-        patchConfig(form)
+        patchConfig(changes)
                 .then(() => {
                     setDirty(false);
+                    setDirtyFields(new Set());
                     setSaved(true);
                 })
                 .catch(err => setError(cockpit.message(err)))
