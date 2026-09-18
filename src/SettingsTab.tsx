@@ -24,6 +24,15 @@ const _ = cockpit.gettext;
 
 const LOG_LEVELS: LogLevel[] = ['critical', 'error', 'warning', 'info'];
 
+const NUMERIC_FIELDS: ReadonlySet<keyof Config> = new Set([
+    'scrub_percentage',
+    'scrub_older_than',
+    'sync_threshold_deletes',
+    'sync_threshold_updates',
+    'probe_interval_minutes',
+    'spindown_idle_minutes',
+]);
+
 const TextField = (
     { form, field, label, help, disabled = false, onChange }: {
         form: Config, field: keyof Config, label: string, help?: string,
@@ -60,19 +69,35 @@ const SwitchField = (
 );
 
 export const SettingsTab = ({ config, isAdmin }: { config?: Config | undefined, isAdmin: boolean }) => {
-    const [form, setForm] = useState<Config | null>(null);
+    const [formState, setForm] = useState<Config | null>(null);
     const [dirty, setDirty] = useState(false);
     const [dirtyFields, setDirtyFields] = useState<ReadonlySet<keyof Config>>(new Set());
+    const [optimisticChanges, setOptimisticChanges] = useState<Partial<Config> | null>(null);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [saved, setSaved] = useState(false);
 
     useEffect(() => {
-        if (config && !dirty)
-            setForm(config);
-    }, [config, dirty]);
+        if (!config || dirty)
+            return;
 
-    if (!form) {
+        if (optimisticChanges) {
+            const pendingChanges = Object.fromEntries(
+                Object.entries(optimisticChanges).filter(([field, value]) =>
+                    config[field as keyof Config] !== value)
+            ) as Partial<Config>;
+            if (Object.keys(pendingChanges).length) {
+                if (Object.keys(pendingChanges).length !== Object.keys(optimisticChanges).length)
+                    setOptimisticChanges(pendingChanges);
+                return;
+            }
+            setOptimisticChanges(null);
+        }
+
+        setForm(config);
+    }, [config, dirty, optimisticChanges]);
+
+    if (!formState) {
         return (
             <EmptyState titleText={ _("Loading settings…") } icon={ Spinner }>
                 <EmptyStateBody />
@@ -80,6 +105,10 @@ export const SettingsTab = ({ config, isAdmin }: { config?: Config | undefined, 
         );
     }
 
+    // The daemon applies configuration immediately, but its next polling result
+    // can briefly still be the preceding snapshot. Saved values overlay that
+    // snapshot until the daemon confirms each field.
+    const form = optimisticChanges ? { ...formState, ...optimisticChanges } : formState;
     const fullAccess = form.config_full_access !== false;
     const readOnly = !isAdmin;
     const fullAccessReadOnly = readOnly || !fullAccess;
@@ -87,19 +116,39 @@ export const SettingsTab = ({ config, isAdmin }: { config?: Config | undefined, 
     const setField = (field: keyof Config, value: string | number | boolean) => {
         setDirty(true);
         setDirtyFields(fields => new Set(fields).add(field));
+        setOptimisticChanges(changes => {
+            if (!changes || !(field in changes))
+                return changes;
+            const remaining = { ...changes };
+            delete remaining[field];
+            return Object.keys(remaining).length ? remaining : null;
+        });
         setSaved(false);
         setForm(f => (f ? { ...f, [field]: value } : f));
     };
 
     const save = () => {
-        const changes = Object.fromEntries(
-            Array.from(dirtyFields, field => [field, form[field]])
-        ) as Partial<Config>;
+        const changes: Partial<Config> = {};
+
+        for (const field of dirtyFields) {
+            const value = formState[field];
+            if (NUMERIC_FIELDS.has(field) && typeof value === 'string') {
+                if (!value.trim() || !Number.isFinite(Number(value))) {
+                    // eslint-disable-next-line no-template-curly-in-string -- cockpit.format() placeholder syntax
+                    setError(cockpit.format(_("${0} must be a number."), field.replace(/_/g, ' ')));
+                    return;
+                }
+                Object.assign(changes, { [field]: Number(value) });
+            } else {
+                Object.assign(changes, { [field]: value });
+            }
+        }
 
         setError(null);
         setSaving(true);
         patchConfig(changes)
                 .then(() => {
+                    setOptimisticChanges(changes);
                     setDirty(false);
                     setDirtyFields(new Set());
                     setSaved(true);
