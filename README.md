@@ -46,7 +46,15 @@ CuratedCoding, the repository maintainer.
 - **Tasks** — queue/active/history of daemon-run commands, with expandable per-task logs
 - **Differences** — files changed since the last sync, with per-file undelete
 - **Recovery** — undelete by glob pattern, heal silent data errors, recovery history
-- **Settings** — edit daemon configuration (schedule, thresholds, notifications, hooks)
+- **Settings** — edit daemon configuration (schedule, thresholds, notifications, hooks), with field-only saves that preserve selections while the daemon confirms them
+
+### Settings saves
+
+This edition sends only the settings you changed, rather than echoing the
+daemon's read-only status data back to it. Schedules such as `00:00`, numeric
+zero values such as disabling scheduled scrub, and notification-level choices
+save reliably. Cockpit keeps a successfully selected value visible while the
+daemon confirms the change.
 
 ## Screenshots
 
@@ -82,7 +90,7 @@ CuratedCoding, the repository maintainer.
 
 ## Install
 
-Grab the latest `.deb` from [Releases](https://github.com/sloraris/cockpit-snapraid/releases/latest)
+Grab the latest `.deb` from [CuratedCoding Releases](https://github.com/CuratedCoding/cockpit-snapraid/releases/latest)
 and install it:
 
 ```
